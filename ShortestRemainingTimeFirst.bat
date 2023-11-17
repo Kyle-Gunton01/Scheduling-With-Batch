@@ -33,8 +33,9 @@ FOR /l %%i IN (1, 1, %procnum%) DO (
 
 
 SET /A currproc=1
-SET /A totalbt=19
+SET /A lastproc=21
 
+ECHO Process	Burst Time Remaining	Current Time
 FOR /l %%j IN (0,1,!totalbt!+1) DO (
 
 	FOR /l %%l IN (!currproc!,1,!currproc!) DO (
@@ -59,8 +60,15 @@ FOR /l %%j IN (0,1,!totalbt!+1) DO (
 			)
 		)
 	)
+	FOR /l %%l IN (!currproc!,1,!currproc!) DO (
+		IF /I !lastproc! NEQ !currproc! (
+			IF /i !currproc! NEQ 21 (
+				SET /A lastproc=!currproc!
+				ECHO P[!pos[%%l]!]	!tempbtarr[%%l]!			%%j
+			)
+		)
+	)
 	SET /A tempbtarr[!currproc!]-=1
-
 )
 
 
