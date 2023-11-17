@@ -17,59 +17,69 @@ echo Enter process details (Burst_Time Arrival_Time):
 
 
 SET /A i=0
+SET /A tempbtarr[21]=2147483647
+
 FOR /l %%i IN (1, 1, %procnum%) DO ( 
 	SET /A i+=1
 	set /p "input=P[!i!]: "
 	for /f "tokens=1,2" %%a in ("!input!") do (
-	    set /A pos[!i!]=!i!
-	    set /A bt[!i!]=%%a
-	    set /A rt[!i!]=%%b
+		set /A pos[!i!]=!i!
+		set /A bt[!i!]=%%a
+		SET /A tempbtarr[!i!]=%%a
+		set /A rt[!i!]=%%b
+		SET /A totalbt+=%%a
 	)
 )
 
-SET /A p=0
-SET /A low=0
-SET /A burn=0
-FOR /l %%j IN (1,1,!i!) DO (
-	SET /A p=0
-	SET /A low=!rt[%%j]!
-	SET /A burn=!bt[%%j]!
 
-	FOR /l %%k IN (%%j+1,1,!i!) DO (
-		IF !rt[%%k]! LSS !low! (
-			SET /A p=%%k
-			SET /A ps=!pos[%%k]!
-			SET /A burn=!bt[%%k]!
-			SET /A low=!rt[%%k]!
+SET /A currproc=1
+SET /A totalbt=19
 
+FOR /l %%j IN (0,1,!totalbt!+1) DO (
+
+	FOR /l %%l IN (!currproc!,1,!currproc!) DO (
+		IF !tempbtarr[%%l]! EQU 0 (
+			SET /A currproc=21
+			SET /A tt[%%l]=%%j-!rt[%%l]!
+			
+			SET /A wt[%%l]=%%j-!rt[%%l]!-!bt[%%l]!
+			SET /A averagewait+=!wt[%%l]!
+			SET /A averageturn+=!tt[%%l]!
+		)	
+	)
+
+	FOR /l %%k IN (1,1,!procnum!) DO (
+		IF !tempbtarr[%%k]! GTR 0 (
+			IF !rt[%%k]! LEQ %%j (
+				FOR /l %%l IN (!currproc!,1,!currproc!) DO (
+					IF !tempbtarr[%%k]! LSS !tempbtarr[%%l]! (
+						SET /A currproc=%%k
+					)
+				)
+			)
 		)
 	)
+	SET /A tempbtarr[!currproc!]-=1
 
-	IF !p! GTR 0 (
-		SET /A tem=!rt[%%j]!
-		SET /A rt[%%j]=!low!
-		SET /A rt[!p!]=!tem!
-
-		SET /A tem=!bt[%%j]!
-		SET /A bt[%%j]=!burn!
-		SET /A bt[!p!]=!tem!
-
-		SET /A tem=!pos[%%j]!
-		SET /A pos[%%j]=ps
-		SET /A pos[!p!]=!tem!
-	)
 )
 
+
+
+
 ECHO.
-ECHO Process	Burst Time	Arrival Time	
+ECHO Process	Burst Time	Arrival Time	Waiting Time	Turnaround Time
 SET /A totalrt=0
-FOR /l %%j IN (1,1,!i!) DO (
-	ECHO P[!pos[%%j]!]	!bt[%%j]!		!rt[%%j]!
+FOR /l %%j IN (1,1,!procnum!) DO (
+	ECHO P[!pos[%%j]!]	!bt[%%j]!		!rt[%%j]!		!wt[%%j]!		!tt[%%j]!
 	SET /A totalrt+=!rt[%%j]!
 )
 
-SET /A totalrt/=%procnum%
+
+SET /A averagewait/=%procnum%
+SET /A averageturn/=%procnum%
+
 ECHO ════════════════════════════════════════════════════
-ECHO Average Wait: %totalrt%
+ECHO Average Wait: %averagewait%
+ECHO Average Turn: %averageturn%
 ECHO ════════════════════════════════════════════════════
 pause

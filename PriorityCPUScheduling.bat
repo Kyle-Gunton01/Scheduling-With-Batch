@@ -12,7 +12,8 @@ IF /i !procnum! gtr 20 (
 	goto start
 )
 
-echo Enter process details (Burst_Time Priority):
+
+echo Enter process details (Burst_Time Arrival_Time Priority):
 
 
 SET /A i=0
@@ -23,36 +24,48 @@ SET /A averagewait=0
 SET /A averageturn=0
 SET /A turntime=0
 SET /A waittime=0
+SET /A time=0
+SET /A procdone=0
+
+SET /A queue[0]=0	
+SET /A queuepos=0
 
 FOR /l %%i IN (1, 1, %procnum%) DO ( 
 	SET /A i+=1
 	set /p "input=P[!i!]: "
-	for /f "tokens=1,2" %%a in ("!input!") do (
+	for /f "tokens=1,2,3" %%a in ("!input!") do (
 	    set /A pos[!i!]=!i!
 	    set /A bt[!i!]=%%a
 	    set /A rt[!i!]=%%b
+	    set /A pt[!i!]=%%c
 	)
 )
 
 
-FOR /l %%j IN (1,1,!i!) DO (
+FOR /l %%j IN (1,1,!procnum!) DO (
 	SET /A a+=1
 	SET /A p=0
-	SET /A low=!rt[%%j]!
+	SET /A low=!pt[%%j]!
+	SET /A arriv=!rt[%%j]!
 	SET /A burn=!bt[%%j]!
 
-	FOR /l %%k IN (%%j+1,1,!i!) DO (
-		IF !rt[%%k]! LSS !low! (
+	FOR /l %%k IN (%%j+1,1,!procnum!) DO (
+		IF !pt[%%k]! GTR !low! (
 			SET /A p=%%k
 			SET /A ps=!pos[%%k]!
 			SET /A burn=!bt[%%k]!
-			SET /A low=!rt[%%k]!
+			SET /A arriv=!rt[%%k]!
+			SET /A low=!pt[%%k]!
 		)
 	)
 
 	IF !p! GTR 0 (
+		SET /A tem=!pt[%%j]!
+		SET /A pt[%%j]=!low!
+		SET /A pt[!p!]=!tem!
+
 		SET /A tem=!rt[%%j]!
-		SET /A rt[%%j]=!low!
+		SET /A rt[%%j]=!arriv!
 		SET /A rt[!p!]=!tem!
 
 		SET /A tem=!bt[%%j]!
@@ -64,23 +77,47 @@ FOR /l %%j IN (1,1,!i!) DO (
 		SET /A pos[!p!]=!tem!
 	)
 
-	SET /A wt[%%j]=!turntime!
-	SET /A averagewait+=!wt[%%j]!
-	SET /A tt[%%j]=!bt[%%j]!+!wt[%%j]!
-	SET /A averageturn+=!tt[%%j]!
-	SET /A turntime=!tt[%%j]!
+
 )
 
+SET /A index=0
+SET /A qi=1
+SET /A at=0
+:que
+FOR /l %%i IN (1, 1, !procnum!) DO ( 
+ECHO Round !rt[%%i]! : !at!
+	IF /i !rt[%%i]! LEQ !at! (
+		IF !switch[%%i]! EQU 0 (
+			SET /A at+=!bt[%%i]!
+			
+			SET /A index+=1
+			SET /A queue[!index!]=%%i
+			SET /A switch[%%i]=1
+			GOTO que
+		)
+	)
+)
+
+
+ECHO Process	Burst Time	Arrival Time	Waiting Time	Turnaround Time
+FOR /l %%a IN (1,1,%procnum%) DO (
+
+
+	FOR /l %%k IN (!queue[%%a]!,1,!queue[%%a]!) DO (
+		SET /A wt=!lastturntime!-!rt[%%k]!
+		SET /A averagewait+=!wt!
+		SET /A tt=!bt[%%k]!+!wt!
+		SET /A averageturn+=!tt!
+		SET /A turntime=!tt!
+		SET /A lastturntime=!tt!+!rt[%%k]!
+		ECHO P[!pos[%%k]!]	!bt[%%k]!		!rt[%%k]!		!wt!		!tt!
+	)
+
+
+)
 
 SET /A averagewait/=%procnum%
 SET /A averageturn/=%procnum%
-
-ECHO Process	Burst Time	Waiting Time	Turnaround Time
-FOR /l %%a IN (1,1,%procnum%) DO (
-	SET /A waittime=!turntime!
-	SET /A turntime=!listp[%%a]!+!waittime!
-	ECHO P[!pos[%%a]!]	!bt[%%a]!		!wt[%%a]!		!tt[%%a]!
-)
 
 ECHO ════════════════════════════════════════════════════
 ECHO Average Wait: %averagewait%
